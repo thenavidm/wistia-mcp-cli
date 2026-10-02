@@ -1,0 +1,85 @@
+{
+  "manifest_version": "0.2",
+  "name": "wistia",
+  "display_name": "Wistia",
+  "version": "2.0.0",
+  "description": "Wistia modern API MCP server with 169 tools for media, folders, captions, channels, webinars, sharing, analytics and uploads.",
+  "long_description": "86 reads and 83 confirmed writes. Private scoped Bearer access; feature permissions and shared quota apply. Generated access credentials save only to private local files. Some operations may incur charges.",
+  "author": {
+    "name": "Navid Moazzez",
+    "url": "https://navid.me"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thenavidm/wistia-mcp-cli"
+  },
+  "homepage": "https://github.com/thenavidm/wistia-mcp-cli",
+  "documentation": "https://github.com/thenavidm/wistia-mcp-cli/blob/main/INSTALL.md",
+  "support": "https://github.com/thenavidm/wistia-mcp-cli/issues",
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "wistia",
+    "video",
+    "captions",
+    "analytics",
+    "uploads",
+    "mcp",
+    "cli",
+    "claude-desktop"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/index.js"
+      ],
+      "env": {
+        "WISTIA_API_TOKEN": "${user_config.api_token}",
+        "WISTIA_TOKEN_FILE": "${user_config.token_file}",
+        "WISTIA_READ_ONLY": "${user_config.read_only}",
+        "WISTIA_ALLOW_DESTRUCTIVE": "${user_config.allow_destructive}"
+      }
+    }
+  },
+  "user_config": {
+    "api_token": {
+      "type": "string",
+      "title": "Wistia API Bearer token",
+      "description": "Private scoped token from Account Settings > API; leave empty for token_file.",
+      "required": false,
+      "sensitive": true
+    },
+    "token_file": {
+      "type": "string",
+      "title": "Private token-only file",
+      "description": "Absolute regular owner-only token file, at most 64 KB. Never bundle it.",
+      "required": false
+    },
+    "read_only": {
+      "type": "boolean",
+      "title": "Read only",
+      "description": "Hide/refuse all 83 mutations, leaving 86 reads.",
+      "default": false,
+      "required": false
+    },
+    "allow_destructive": {
+      "type": "boolean",
+      "title": "Allow confirmed writes",
+      "description": "If disabled, refuse all 83 mutations even when confirmed.",
+      "default": true,
+      "required": false
+    }
+  },
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=22"
+    }
+  }
+}

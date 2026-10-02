@@ -1,0 +1,23 @@
+{
+  "source": "https://raw.githubusercontent.com/wistia/wistia-cli/7e5f1ca1e3db2e145357a01afcca8f5e156b8924/.speakeasy/out.openapi.yaml",
+  "upstreamCommit": "7e5f1ca1e3db2e145357a01afcca8f5e156b8924",
+  "officialCliRelease": "v2026.9.0",
+  "upstreamSources": [
+    "https://wistia.github.io/wistia/api/openapi-modern.yaml",
+    "https://wistia.github.io/wistia/api/openapi-upload.yaml"
+  ],
+  "checked": "2026-10-02",
+  "apiVersion": "Modern Data API, X-Wistia-Api-Version: 2026-09",
+  "documentVersion": "2026.09.0",
+  "operationCount": 168,
+  "apiHttpOperations": 167,
+  "sha256": "fe029352dda6c8ffb1d0b98a123185579ab8239594af9173c51595759545a0e0",
+  "upstreamSha256": "d5ec0d7da24adbdd589e9223223603b09eda3affd4e9023b49b6d6858b08e376",
+  "corrections": [
+    "Stable published September schema is pinned; 25 additional edge HTTP operations are not advertised as stable.",
+    "Retain /modern and dated version header; uploader is a separate fixed origin with Bearer header only. Credential body arguments are removed.",
+    "Remove all examples; resolve local references, flatten object-only upload allOf, normalize iso8601 format to date-time; retain other current JSON Schema constraints.",
+    "Find Caption Matches is a nonmutating POST and remains available in read-only mode. All actual mutations confirm; no POST or mutation retries.",
+    "Native request names remain exact, including camelCase folder body fields, legacy upload project_id and modern hashed_ids[] arrays. Per-page local bound is 100."
+  ]
+}
