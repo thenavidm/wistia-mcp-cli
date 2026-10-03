@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+Use the native terminal capture at 1040 source pixels with lossless GIF optimization, displayed at 520 pixels, matching the Bluesky/Substack reference. Original assets remain available.
+
 ## 2.0.0 - 2026-10-02
 
 - Update to the published stable September API schema: 167 HTTP operations, separate form/file uploads and a local account helper, 169 tools total.

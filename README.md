@@ -15,7 +15,7 @@ One package provides local MCP, the same operations as task CLI commands, and a 
 
 Built and maintained by [Navid Moazzez](https://navid.me?utm_source=github&utm_medium=referral&utm_campaign=wistia-mcp-cli&utm_content=readme). Complete installation and private account setup are in [INSTALL.md](INSTALL.md).
 
-<img src="https://cdn.navid.me/repos/wistia-mcp-cli.gif?v=2.0.0" alt="Illustrated Wistia workflow in the same house terminal used on navid.me" width="520">
+<img src="https://cdn.navid.me/repos/wistia-mcp-cli-retina.gif" alt="Illustrated Wistia workflow in the same house terminal used on navid.me" width="520">
 
 The terminal illustrates shipped caption tools with sample data. It is a presentation preview, not a verified live account edit.
 
