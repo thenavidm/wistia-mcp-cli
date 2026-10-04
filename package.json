@@ -1,12 +1,13 @@
 {
   "name": "@thenavidm/wistia-mcp-cli",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Wistia modern Data API MCP server and shared task CLI for media, folders, captions, webinars, sharing, accessibility, analytics and uploads.",
   "type": "module",
   "main": "./dist/index.js",
   "bin": {
     "wistia-mcp": "dist/index.js",
-    "wistia-cli": "dist/index.js"
+    "wistia-cli": "dist/index.js",
+    "wistia-mcp-cli": "dist/npx.js"
   },
   "engines": {
     "node": ">=22"
