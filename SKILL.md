@@ -15,7 +15,7 @@ Run wistia-cli --version. STOP account work if unavailable; install through the 
 
 ## Discovery
 
-Use wistia-cli tools, COMMAND --help and schema COMMAND. Media/folders, captions, uploads, channels, webinars, sharing, analytics/Stats and accounts use the same MCP handlers. Every mutation is marked and requires --confirm for the specific requested action. find_caption_matches is a read-like POST. list_accounts is local. Do not hand-maintain the whole command list.
+Use wistia-cli tools, COMMAND --help and schema COMMAND. Media/folders, captions, uploads, channels, webinars, sharing, analytics/Stats and accounts use the same MCP handlers. Every mutation is marked and requires --confirm for the specific requested action. Over MCP the person approves each in the client's own prompt or form; confirm:true counts only where the client cannot ask. wistia-cli which <words> finds the command for a task. find_caption_matches is a read-like POST. list_accounts is local. Do not hand-maintain the whole command list.
 
 ## Agent mode and arguments
 
@@ -38,7 +38,8 @@ Stable September schema, /modern and dated 2026-09 default header. Edge-only Rem
 | Exit | Meaning |
 | --- | --- |
 | 0 | Success |
-| 2 | Invalid usage or refused mutation |
+| 1 | Unexpected error |
+| 2 | Invalid usage or refused mutation, an unknown command or a hidden write |
 | 3 | Resource not found |
 | 4 | Authentication/permission failure |
 | 5 | API/transport failure |

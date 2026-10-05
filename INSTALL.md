@@ -6,7 +6,7 @@ One npm package includes both binaries and all **169 tools**. Requires Node.js 2
 | --- | --- | --- |
 | Terminal | wistia-cli | Scripts and agents with a shell |
 | Local MCP | wistia-mcp | AI clients supporting stdio |
-| Desktop archive | wistia-2.0.0.mcpb | Compatible Claude Desktop custom extensions |
+| Desktop archive | wistia-3.0.0.mcpb | Compatible Claude Desktop custom extensions |
 | Wistia-hosted alternative | https://api.wistia.com/mcp/api | Official remote OAuth, owner/manager access |
 
 ## Contents
@@ -126,7 +126,7 @@ Alternatively install the CLI, make SKILL.md available to Claude, and use shell 
 
 ### Install the .mcpb extension
 
-1. Download `wistia-2.0.0.mcpb` from [GitHub Releases](https://github.com/thenavidm/wistia-mcp-cli/releases/latest).
+1. Download `wistia-3.0.0.mcpb` from [GitHub Releases](https://github.com/thenavidm/wistia-mcp-cli/releases/latest).
 2. In a supported Claude Desktop build, open **Settings > Extensions > Advanced settings > Install Extension…** and select it.
 3. Enter a private Bearer token in the sensitive setting, or an absolute private token-file path. Leave the unused credential method empty. Wistia uses Bearer authentication.
 4. Enable read-only if you want only the 86 reads. Reconnect and ask for account verification.

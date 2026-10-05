@@ -2,7 +2,7 @@
   "manifest_version": "0.2",
   "name": "wistia",
   "display_name": "Wistia",
-  "version": "2.0.1",
+  "version": "3.0.0",
   "description": "Wistia modern API MCP server with 169 tools for media, folders, captions, channels, webinars, sharing, analytics and uploads.",
   "long_description": "86 reads and 83 confirmed writes. Private scoped Bearer access; feature permissions and shared quota apply. Generated access credentials save only to private local files. Some operations may incur charges.",
   "author": {

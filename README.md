@@ -13,7 +13,7 @@ Wistia MCP server and CLI for Codex and AI agents. **169 tools: 86 reads and 83 
 
 One package provides local MCP, the same operations as task CLI commands, and a bundled Claude Desktop .mcpb extension.
 
-Built and maintained by [Navid Moazzez](https://navid.me?utm_source=github&utm_medium=referral&utm_campaign=wistia-mcp-cli&utm_content=readme). Complete installation and private account setup are in [INSTALL.md](INSTALL.md).
+Built and maintained by [Navid Moazzez](https://navid.me?utm_source=github&utm_medium=referral&utm_campaign=wistia-mcp-cli&utm_content=readme). Built on [Slipway](https://github.com/thenavidm/slipway), which turns one definition of each tool into the MCP server and the CLI. Complete installation and private account setup are in [INSTALL.md](INSTALL.md).
 
 <img src="https://cdn.navid.me/repos/wistia-mcp-cli-retina.gif" alt="Illustrated Wistia workflow in the same house terminal used on navid.me" width="520">
 
@@ -117,7 +117,7 @@ wistia-cli doctor
 wistia-cli tools
 ```
 
-Manual MCP/CLI installs require Node 22 or newer. Help, discovery and schemas work before authentication. Account requests require privately configured access. The [wistia-2.0.0.mcpb desktop archive](https://github.com/thenavidm/wistia-mcp-cli/releases/download/v2.0.0/wistia-2.0.0.mcpb) bundles production dependencies for a compatible host. Full client/OS wiring is in [INSTALL.md](INSTALL.md).
+Manual MCP/CLI installs require Node 22 or newer. Help, discovery and schemas work before authentication. Account requests require privately configured access. The [wistia-3.0.0.mcpb desktop archive](https://github.com/thenavidm/wistia-mcp-cli/releases/download/v3.0.0/wistia-3.0.0.mcpb) bundles production dependencies for a compatible host. Full client/OS wiring is in [INSTALL.md](INSTALL.md).
 
 Codex local MCP, after private environment configuration:
 
@@ -194,9 +194,9 @@ IDs above are illustrative; use discovered resources from your own account. Null
 | --help / schema COMMAND | Current argument help / full JSON Schema |
 | --json | Structured JSON |
 | --compact | One-line JSON |
-| --agent | Compact JSON, no prompts or color |
+| --agent | Compact JSON and no prompts; never confirms a write |
 | --select a,b.c | Keep selected fields, including nested objects/arrays |
-| --no-color / --no-input | Noninteractive house flags |
+| --no-color / --no-input | Noninteractive switches |
 | --yes | Never replaces write confirmation |
 | --confirm | Confirm only the requested mutation |
 | --account NAME | Select private local credentials |
@@ -205,7 +205,8 @@ IDs above are illustrative; use discovered resources from your own account. Null
 | Exit | Meaning |
 | --- | --- |
 | 0 | Success |
-| 2 | Invalid arguments or refused write |
+| 1 | Unexpected error |
+| 2 | Invalid arguments or refused write, an unknown command or a hidden write |
 | 3 | Resource not found |
 | 4 | Authentication/permission failure |
 | 5 | API/transport failure |
@@ -216,17 +217,21 @@ Results go to stdout, errors as JSON to stderr. Selection changes local output, 
 
 ## 7. MCP or CLI and token cost
 
-MCP and CLI use the same SDK server, schemas, validation and HTTP handlers. The CLI talks to that server through the SDK's in-memory transport; there is no second API implementation.
+MCP and CLI use the same schemas, validation and HTTP handlers: [Slipway](https://github.com/thenavidm/slipway) builds the MCP server, over stdio or `--http`, and the CLI from each tool's one definition; there is no second API implementation.
 
-| Measurement | What to include |
-| --- | --- |
-| Eager MCP loading | All tool schemas and instructions |
-| Default/deferred tool search | Actual selected schemas and discovery overhead |
-| Skill read once | Full SKILL.md and command discovery |
-| Recurring skill discovery | The installed skill's listing text |
-| Matched successful task | Help/schema, reasoning, calls/commands, results, errors and retries |
+Measured on 2026-10-05 against 2.0.1, with Claude Code 2.1.286 on Claude Opus 5.5 (one short prompt with and without the server connected, the difference read from the API's own usage figures) and Codex 0.159.3 on gpt-6.1-sol:
 
-Fresh Codex usage measurements are pending. Claude Code measurements are deferred and do not block this release. Do not estimate tokens from characters, substitute another repo's results or declare zero CLI cost. Record model/client/package versions and date, loading settings, input/output usage, latency and equivalent outcomes. Compare a small folder/media query and repeated focused caption and media work across supported official/local surfaces, using the same authorized data and result fields. API quota and service costs remain separate. No measured superiority is claimed.
+| Cost | 2.0.1 | 3.0.0 |
+| --- | --- | --- |
+| Claude Code, every tool loaded, every message | 175,141 | 147,760 |
+| Claude Code's default, tool search, every message | 2,606 | 2,608 |
+| `SKILL.md`, read once | 1,413 | 1,492 |
+| Codex over the CLI, one task, median of five | 86,367 | 83,866 |
+| Codex over MCP, the same task, median of five | 48,777 | 48,646 |
+
+The task was "find the command that imports media from a URL, and the flags it requires". Every tool loaded costs less because parts that several tools repeated, such as the player plugin settings, are written once. Over the CLI, 3.0.0's runs asked `which`, whose answer carries the command's help, where every 2.0.1 run read the 11,488-character command list. Over MCP, 3.0.0 cost slightly less. `SKILL.md` costs 79 more because it says how approval works over MCP and how `which` finds a command, and what exit codes 1 and 2 cover.
+
+Tool-list bytes or characters divided by four are not API usage, and no other offering was measured.
 
 ## 8. Every tool and argument
 
@@ -417,7 +422,7 @@ All 167 stable HTTP operations derive from the pinned official September schema.
 | `url` | No; body/guard rules still apply | string | The publicly accessible web location of the media file to import. format: `uri`. |
 | `low_priority` | No; body/guard rules still apply | boolean | Inform the encoding service that this upload can be considered lower priority than others. This is especially useful for platform customers doing bulk uploads or migrations. Setting this to "false" has no effect. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `url`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -435,7 +440,7 @@ Body requires: `url`.
 | `contact_id` | No; body/guard rules still apply | integer | A Wistia contact id. |
 | `file` | No; body/guard rules still apply | string | Absolute regular local file, no symlinks, at most 250 MiB locally. Bytes are sent after explicit confirmation. minLength: `1`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `file`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -470,7 +475,7 @@ Body requires: `file`.
 | `name` | No; body/guard rules still apply | string | The bundle display name. |
 | `allow_downloads` | No; body/guard rules still apply | boolean | Whether the videos in the bundle can be downloaded. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `media_hashed_ids`, `name`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -484,7 +489,7 @@ Body requires: `media_hashed_ids`, `name`.
 | --- | --- | --- | --- |
 | `review_bundle_hashed_id` | Yes | string | The hashed id of the review bundle. minLength: `1`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### list_deleted_media
 
@@ -511,7 +516,7 @@ Body requires: `media_hashed_ids`, `name`.
 | `media_hashed_ids` | No; body/guard rules still apply | array | The hashed ids of the soft-deleted media to restore. Up to 1000 at a time. Array items: string. |
 | `folder_id` | No; body/guard rules still apply | string | Optional hashed id of the folder to restore the media into. If omitted, each media returns to the folder it was deleted from. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `media_hashed_ids`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -564,7 +569,7 @@ Body requires: `media_hashed_ids`.
 | `tags` | No; body/guard rules still apply | array | An array of tag names to apply to the media. This replaces any existing tags. To add tags without replacing existing tags, use bulk-tag-media. Array items: string. |
 | `custom_metadata` | No; body/guard rules still apply | object | Custom metadata field values to set, keyed by field key. Values take the same shapes as the Set Custom Metadata Field Value endpoint; a null value clears that field and omitted fields are untouched. Requires the custom metadata feature on the account. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -576,7 +581,7 @@ Body requires: `media_hashed_ids`.
 | --- | --- | --- | --- |
 | `media_hashed_id` | Yes | string | The hashed ID of the media. minLength: `1`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### copy_media
 
@@ -588,7 +593,7 @@ Body requires: `media_hashed_ids`.
 | `folder_id` | No; body/guard rules still apply | integer | The ID of the folder where you want the new copy placed. Defaults to the source media’s current folder if omitted or invalid. |
 | `owner` | No; body/guard rules still apply | string | An email address specifying the owner of the new media. Defaults to the source media’s current owner if omitted or invalid. format: `email`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -601,7 +606,7 @@ Body requires: `media_hashed_ids`.
 | `media_hashed_id` | Yes | string | The hashed ID of the media to be replaced. minLength: `1`. |
 | `replacement_media_id` | No; body/guard rules still apply | string | The hashed ID of the media that will replace the original media. Must be the same media type as the original. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `replacement_media_id`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -626,7 +631,7 @@ Body requires: `replacement_media_id`.
 | `target_language` | No; body/guard rules still apply | string | The language to translate the transcript to. Use the bibliographic ISO 639-2 form or a supported regional or script IETF tag. |
 | `source_language` | No; body/guard rules still apply | string | The language of the source transcript. Use the bibliographic ISO 639-2 form or a supported regional or script IETF tag. If not provided, the media's default transcript language will be used. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `target_language`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -641,7 +646,7 @@ Body requires: `target_language`.
 | `url` | No; body/guard rules still apply | string | The publicly accessible URL of the media file to import. format: `uri`. |
 | `folder_id` | No; body/guard rules still apply | string | The hashed ID of the folder (project) to import the media into. If not provided, a new folder will be created. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `url`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -655,7 +660,7 @@ Body requires: `url`.
 | --- | --- | --- | --- |
 | `hashed_ids` | No; body/guard rules still apply | array | An array of the media hashed IDs to be archived. Array items: string. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `hashed_ids`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -671,7 +676,7 @@ Body requires: `hashed_ids`.
 | `folder_id` | No; body/guard rules still apply | string | The hashed ID of the folder where you want the media moved. |
 | `subfolder_id` | No; body/guard rules still apply | string | Optional. The hashed ID of the subfolder where you want the media moved. If not provided, media will be moved to the folder's default subfolder. The subfolder must belong to the specified folder. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `hashed_ids`, `folder_id`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -686,7 +691,7 @@ Body requires: `hashed_ids`, `folder_id`.
 | `hashed_ids` | No; body/guard rules still apply | array | An array of the media hashed IDs to be restored. Array items: string. |
 | `folder_id` | No; body/guard rules still apply | string | The hashed ID of the folder to restore the medias to. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `hashed_ids`, `folder_id`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -701,7 +706,7 @@ Body requires: `hashed_ids`, `folder_id`.
 | `hashed_ids` | No; body/guard rules still apply | array | An array of the media hashed IDs to be copied. Array items: string. |
 | `folder_id` | No; body/guard rules still apply | string | The hashed ID of the destination folder where the copies will be placed. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `hashed_ids`, `folder_id`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -762,7 +767,7 @@ Body requires: `hashed_ids`, `folder_id`.
 | `volumeControl` | No; body/guard rules still apply | boolean | When set to true, a volume control is available over the video. |
 | `wmode` | No; body/guard rules still apply | string | If set to transparent, the background behind the player will be transparent instead of black. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -846,7 +851,7 @@ Nested body fields:
 | `volumeControl` | No; body/guard rules still apply | boolean | When set to true, a volume control is available over the video. |
 | `wmode` | No; body/guard rules still apply | string | If set to transparent, the background behind the player will be transparent instead of black. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -892,7 +897,7 @@ Nested body fields:
 | --- | --- | --- | --- |
 | `media_id` | Yes | string | The hashed ID of the media whose customizations are to be deleted. minLength: `1`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### get_appearance_customizations
 
@@ -922,7 +927,7 @@ Nested body fields:
 | `customerLogoPlacement` | No; body/guard rules still apply | string | Placement of the customer logo on the player (e.g. top-right). |
 | `customerLogoSizePercent` | No; body/guard rules still apply | integer | Size of the customer logo as a percentage of the player. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -989,7 +994,7 @@ Nested body fields:
 | `email` | No; body/guard rules still apply | string | Associate a specific email address with this video’s viewing sessions. |
 | `googleAnalytics` | No; body/guard rules still apply | string | Google Analytics tracking configuration to associate with this video’s viewing sessions. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1015,7 +1020,7 @@ Nested body fields:
 | `unalteredStillImageAsset` | No; body/guard rules still apply | string | Reference to the original, unaltered still image asset. |
 | `plugin` | No; body/guard rules still apply | object | Container for thumbnail-related player plugin configurations. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1060,7 +1065,7 @@ Nested body fields:
 | `audioDescriptionControl` | No; body/guard rules still apply | boolean | If true, the audio description control is available to viewers. |
 | `plugin` | No; body/guard rules still apply | object | Current schema |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1095,7 +1100,7 @@ Nested body fields:
 | `media_id` | Yes | string | The hashed ID of the media to be customized. minLength: `1`. |
 | `plugin` | No; body/guard rules still apply | object | Current schema |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1138,7 +1143,7 @@ Nested body fields:
 | `media_id` | Yes | string | The hashed ID of the video to be customized. minLength: `1`. |
 | `plugin` | No; body/guard rules still apply | object | Container for engagement plugin configurations. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1183,7 +1188,7 @@ Nested body fields:
 | `media_id` | Yes | string | The hashed ID of the video to be customized. minLength: `1`. |
 | `plugin` | No; body/guard rules still apply | object | Current schema |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1217,7 +1222,7 @@ Nested body fields:
 | `media_id` | Yes | string | The hashed ID of the video to be customized. minLength: `1`. |
 | `plugin` | No; body/guard rules still apply | object | Current schema |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1255,7 +1260,7 @@ Nested body fields:
 | `enabled` | No; body/guard rules still apply | boolean | Whether the selected provider is turned on. Defaults to true. |
 | `settings` | No; body/guard rules still apply | object | Provider-specific settings. Only the fields relevant to the chosen provider are used. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `provider`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1294,7 +1299,7 @@ Nested body fields:
 | `encrypted` | No; body/guard rules still apply | object | Current schema |
 | `plugin` | No; body/guard rules still apply | object | Current schema |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1337,7 +1342,7 @@ Nested body fields:
 | `media_id` | Yes | string | The hashed ID of the media. minLength: `1`. |
 | `visibility` | No; body/guard rules still apply | string | Controls who can view the media via this share link.  - `unlocked`: anyone with the link can view the media. - `account`: only signed-in members of the media's account can view. - `locked`: only contacts with access to the media's folder can view. - `domain_verified`: only viewers signed in with an email address at a   domain verified on the media's account can view. Requires the account   to be enrolled in the domain validation gate; otherwise setting this   value returns 400. Values: `unlocked`, `account`, `locked`, `domain_verified`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `visibility`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1351,7 +1356,7 @@ Body requires: `visibility`.
 | --- | --- | --- | --- |
 | `media_id` | Yes | string | The hashed ID of the media. minLength: `1`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### list_captions
 
@@ -1372,7 +1377,7 @@ Body requires: `visibility`.
 | `caption_file` | No; body/guard rules still apply | string | Either an attached SRT file or a string parameter with the contents of an SRT file. |
 | `language` | No; body/guard rules still apply | string | An optional parameter that denotes which language this file represents. Should conform to ISO-639–2. If left unspecified, the language code will be detected automatically. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `caption_file`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1426,7 +1431,7 @@ Body requires: `media_ids`, `target_text`.
 | `rush` | No; body/guard rules still apply | boolean | Enable rush order for one business day turnaround instead of the standard four, for human-reviewed captions only. Rush bills at the account's higher per-minute rate. default: `True`. |
 | `automatically_enable` | No; body/guard rules still apply | boolean | Automatically enable captions for the media once the order is ready or hold the captions for review before manually enabling. default: `True`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1452,7 +1457,7 @@ Body requires: `media_ids`, `target_text`.
 | `language_code` | Yes | string | Language code conforming to ISO-639-2 for which the captions should be updated. minLength: `1`. pattern: `^[a-z]{3}$`. |
 | `caption_file` | No; body/guard rules still apply | string | Either an attached SRT file or a string parameter with the contents of an SRT file. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `caption_file`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1467,7 +1472,7 @@ Body requires: `caption_file`.
 | `media_hashed_id` | Yes | string | Unique identifier for the media. minLength: `1`. |
 | `language_code` | Yes | string | Language code conforming to ISO-639-2 for which the captions should be removed. minLength: `1`. pattern: `^[a-z]{3}$`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### edit_captions_text
 
@@ -1480,7 +1485,7 @@ Body requires: `caption_file`.
 | `edits` | No; body/guard rules still apply | array | The corrections to apply, all-or-nothing, in one new version. minItems: `1`. maxItems: `20`. Array items: object. |
 | `expected_version` | No; body/guard rules still apply | integer | The active caption version returned with the caption content used to prepare these edits. The edit applies only if that is still the active version; otherwise it returns 409 so you re-read and retry. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `edits`, `expected_version`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1515,7 +1520,7 @@ Nested body fields:
 | `output_language` | No; body/guard rules still apply | string | The language to localize the media to as a 3-character IETF language code. |
 | `auto_enable` | No; body/guard rules still apply | boolean | Whether to automatically enable the localization. default: `True`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `output_language`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1541,7 +1546,7 @@ Body requires: `output_language`.
 | `media_hashed_id` | Yes | string | The hashed ID of the localization's media. minLength: `1`. |
 | `localization_hashed_id` | Yes | string | The hashed ID of the localization to delete. minLength: `1`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### create_media_from_trims
 
@@ -1553,7 +1558,7 @@ Body requires: `output_language`.
 | `trims` | No; body/guard rules still apply | array | An array of strings matching the format of HH:MM:SS.mmm-HH:MM:SS.mmm where HH is hours, MM is minutes, SS is seconds and mmm is milliseconds. When keep_trims is false (default), the ranges specify parts of the media to remove. When keep_trims is true, the ranges specify parts of the media to keep. Array items: string. |
 | `keep_trims` | No; body/guard rules still apply | boolean | When set to true, the trims parameter is treated as ranges to keep rather than ranges to remove. Defaults to false. default: `False`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `trims`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1592,7 +1597,7 @@ Body requires: `trims`.
 | --- | --- | --- | --- |
 | `id` | Yes | string | The hashed id of the Media Extended Audio Description minLength: `1`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### order_extended_audio_description
 
@@ -1606,7 +1611,7 @@ Body requires: `trims`.
 | `order_instructions` | No; body/guard rules still apply | string | Optional instructions for the audio description provider. |
 | `ietf_language_tag` | No; body/guard rules still apply | string | IETF language tag for the audio description. Defaults to `eng` (English). Non-English orders must set `ai_enabled: false` :  AI-generated audio descriptions are only available in English.  Spanish (`es-419`) orders are only accepted when the source media is tagged as a Spanish-language variant or has no detected language (e.g. silent videos). Spanish orders against a media in another language return `400`. default: `eng`. Values: `eng`, `es-419`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `media_id`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1654,7 +1659,7 @@ Body requires: `media_id`.
 | `page_logo` | No; body/guard rules still apply | object/null | The brand logo used for pages. `url` must be a Wistia delivery URL :  see the note on uploading below. On accounts without custom branding the player logo is ignored, but the page logo is always applied. |
 | `player_logo` | No; body/guard rules still apply | object/null | The brand logo used for the player. `url` must be a Wistia delivery URL :  see the note on uploading below. Ignored on accounts whose plan doesn't include custom branding. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1701,7 +1706,7 @@ Nested body fields:
 | `page_logo` | No; body/guard rules still apply | object/null | The brand logo used for pages. `url` must be a Wistia delivery URL :  see the note on uploading below. On accounts without custom branding the player logo is ignored, but the page logo is always applied. |
 | `player_logo` | No; body/guard rules still apply | object/null | The brand logo used for the player. `url` must be a Wistia delivery URL :  see the note on uploading below. Ignored on accounts whose plan doesn't include custom branding. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1729,7 +1734,7 @@ Nested body fields:
 | `brand_id` | Yes | string | The id of the brand minLength: `1`. |
 | `sync_to_customizations` | No; body/guard rules still apply | boolean | When true, the brand's values are baked into the customizations of everything it was applied to before it is deleted, so those items keep their current appearance. Defaults to false. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### apply_brand
 
@@ -1742,7 +1747,7 @@ Nested body fields:
 | `resource_id` | No; body/guard rules still apply | string | The id of the resource being branded. |
 | `clear_overrides` | No; body/guard rules still apply | boolean | When true (the default), appearance settings the resource had set directly are cleared for the fields the brand controls, so the brand is what shows. Set to false to leave them in place, in which case they continue to win over the brand. default: `True`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `resource_type`, `resource_id`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1787,7 +1792,7 @@ Body requires: `resource_type`, `resource_id`.
 | --- | --- | --- | --- |
 | `name` | No; body/guard rules still apply | string | The tag name. Stored lowercased with whitespace squished, 50 characters max, and must not already exist on the account. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `name`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1801,7 +1806,7 @@ Body requires: `name`.
 | --- | --- | --- | --- |
 | `name` | Yes | string | Name of the tag to delete minLength: `1`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### create_bulk_actions
 
@@ -1812,7 +1817,7 @@ Body requires: `name`.
 | `actions` | No; body/guard rules still apply | array | An array of actions to process, one per record. Maximum 1000 actions per request, and the request body must stay under 2 MB -- whichever limit is reached first. An oversized body is rejected with a `413` and no action in it runs. Each action specifies an operation (create, update, delete, or move), a resource type, and the relevant payload or record ID.  Use `job` instead when every record takes the same payload. minItems: `1`. maxItems: `1000`. Array items: object. |
 | `job` | No; body/guard rules still apply | object | One change applied to many records, named by a parent (`scope`) or listed explicitly (`ids`). The server resolves the target and runs one action per record, so a folder of 400 media takes one job rather than 400 actions.  A `scope` resolves to exactly what the matching list endpoint returns for that parent, including its defaults -- so a `folder` scope on `media` reaches media in that folder's subfolders, and includes **archived** media.  A job resolves to at most 5000 records. Beyond that it is rejected rather than truncated, so a job never silently acts on part of the set you named -- narrow the scope, or send the records as an actions array.  Cannot be used with `create`, which has no record to address, and is not available to external contacts. Object requires: `operation`, `resource_type`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1841,7 +1846,7 @@ Nested body fields:
 | `actions` | No; body/guard rules still apply | array | The orders to place, one per media. Maximum 1000 per request, and the request body must stay under 2 MB -- whichever limit is reached first. An oversized body is rejected with a `413` and no order in it is placed.  Every order is priced and placed independently: one failing (an ineligible media, an account without a saved card, a language that already has a localization) does not stop the rest of the batch.  Use `job` instead to order for a whole folder, channel, or account. minItems: `1`. maxItems: `1000`. Array items: object. |
 | `job` | No; body/guard rules still apply | object | One order placed for many media, named by a parent (`scope`) or listed explicitly (`ids`), so ordering captions for a folder of 47 videos takes one job rather than 47 orders.  A `scope` resolves to exactly what List Media returns for that parent, including media in the folder's subfolders and **archived** media, and to at most 5000 media -- beyond that the job is rejected rather than truncated.  The job attempts one order for every media it resolves to. Ineligible media fail individually without placing an order; successful orders are metered and may incur charges according to the account's plan. Confirm the scope and potential cost with the customer before submitting. Not available to external contacts. Object requires: `operation`, `resource_type`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1870,7 +1875,7 @@ Nested body fields:
 | `hashed_ids` | No; body/guard rules still apply | array | An array of the media hashed IDs to be tagged. Array items: string. |
 | `tag_names` | No; body/guard rules still apply | array | An array of tag names to add to each media. Array items: string. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `hashed_ids`, `tag_names`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1906,7 +1911,7 @@ Body requires: `hashed_ids`, `tag_names`.
 | `public` | No; body/guard rules still apply | boolean | A flag indicating whether or not the folder is enabled for public access. |
 | `personalLibrary` | No; body/guard rules still apply | boolean | When true, creates the folder inside the requesting user's personal "My Library" (owned by them) instead of a shared account folder. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1932,7 +1937,7 @@ Body requires: `hashed_ids`, `tag_names`.
 | `anonymousCanDownload` | No; body/guard rules still apply | boolean | Whether anonymous users can download media from the folder. |
 | `public` | No; body/guard rules still apply | boolean | A flag indicating whether or not the folder is enabled for public access. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1944,7 +1949,7 @@ Body requires: `hashed_ids`, `tag_names`.
 | --- | --- | --- | --- |
 | `id` | Yes | string | Folder Hashed ID minLength: `1`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### copy_folder
 
@@ -1955,7 +1960,7 @@ Body requires: `hashed_ids`, `tag_names`.
 | `id` | Yes | string | Folder Hashed ID minLength: `1`. |
 | `adminEmail` | No; body/guard rules still apply | string | The email address of the account Manager that will be the owner of the new folder. Defaults to the Account Owner if invalid or omitted. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -1985,7 +1990,7 @@ Body requires: `hashed_ids`, `tag_names`.
 | `folder_id` | Yes | string | Hashed ID of the folder to be shared minLength: `1`. |
 | `sharing` | No; body/guard rules still apply | object | Object requires: `with`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `sharing`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2022,7 +2027,7 @@ Nested body fields:
 | `sharing_id` | Yes | string | ID of the sharing to be updated minLength: `1`. |
 | `sharing` | No; body/guard rules still apply | object | Current schema |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2044,7 +2049,7 @@ Nested body fields:
 | `folder_id` | Yes | string | Hashed ID of the folder minLength: `1`. |
 | `sharing_id` | Yes | string | ID of the sharing to be deleted minLength: `1`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### list_subfolders
 
@@ -2073,7 +2078,7 @@ Nested body fields:
 | `name` | No; body/guard rules still apply | string | The display name of the subfolder. maxLength: `255`. |
 | `description` | No; body/guard rules still apply | string/null | A description for the subfolder. maxLength: `1000`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `name`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2101,7 +2106,7 @@ Body requires: `name`.
 | `name` | No; body/guard rules still apply | string | The new name for the subfolder maxLength: `255`. |
 | `description` | No; body/guard rules still apply | string/null | The new description for the subfolder maxLength: `1000`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2114,7 +2119,7 @@ Body requires: `name`.
 | `folder_id` | Yes | string | The hashed ID of the folder minLength: `1`. |
 | `subfolder_id` | Yes | string | The hashed ID of the subfolder minLength: `1`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### bulk_delete_subfolders
 
@@ -2125,7 +2130,7 @@ Body requires: `name`.
 | `folder_id` | Yes | string | The hashed ID of the folder containing the subfolders minLength: `1`. |
 | `hashed_ids` | No; body/guard rules still apply | array | An array of the subfolder hashed IDs to be deleted. Array items: string. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `hashed_ids`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2160,7 +2165,7 @@ Body requires: `hashed_ids`.
 | `custom_url` | No; body/guard rules still apply | string/null | Use if embedding the channel on your own site. The custom URL ensures links always direct to your page and not Wistia's. |
 | `podcast_settings` | No; body/guard rules still apply | object | Podcast specific settings for a channel. These settings only take effect if podcasting is enabled for the channel. These values appear in the channel's publicly accessible podcast RSS feed. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2202,7 +2207,7 @@ Nested body fields:
 | `custom_url` | No; body/guard rules still apply | string/null | Use if embedding the channel on your own site. The custom URL ensures links always direct to your page and not Wistia's. |
 | `podcast_settings` | No; body/guard rules still apply | object | Podcast specific settings for a channel. These settings only take effect if podcasting is enabled for the channel. These values appear in the channel's publicly accessible podcast RSS feed. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2229,7 +2234,7 @@ Nested body fields:
 | --- | --- | --- | --- |
 | `channel_hashed_id` | Yes | string | The hashed id of the Channel minLength: `1`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### get_channel_episode
 
@@ -2276,7 +2281,7 @@ Nested body fields:
 | `publish_at` | No; body/guard rules still apply | string | The date and time when the episode should be published in UTC timezone. Required when publish_status is 'scheduled'. Must be a valid ISO8601 timestamp in UTC (ending with 'Z').  Can only be provided when publish_status is 'scheduled.' format: `date-time`. |
 | `podcast_settings` | No; body/guard rules still apply | object | Podcast specific settings for a channel episode. These settings only take effect if podcasting is enabled for the channel. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2327,7 +2332,7 @@ Nested body fields:
 | `episode_notes` | No; body/guard rules still apply | string | Additional notes for the episode. |
 | `podcast_settings` | No; body/guard rules still apply | object | Podcast specific settings for a channel episode. These settings only take effect if podcasting is enabled for the channel. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2349,7 +2354,7 @@ Nested body fields:
 | --- | --- | --- | --- |
 | `channel_episode_hashed_id` | Yes | string | The hashed id of the Channel Episode minLength: `1`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### publish_channel_episode
 
@@ -2360,7 +2365,7 @@ Nested body fields:
 | `channel_episode_hashed_id` | Yes | string | The hashed id of the Channel Episode minLength: `1`. |
 | `publish_at` | No; body/guard rules still apply | string | The date and time when the episode is scheduled to be published in UTC timezone. format: `date-time`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2372,7 +2377,7 @@ Nested body fields:
 | --- | --- | --- | --- |
 | `channel_episode_hashed_id` | Yes | string | The hashed id of the Channel Episode minLength: `1`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### list_channel_collaborators
 
@@ -2400,7 +2405,7 @@ Nested body fields:
 | `email` | No; body/guard rules still apply | string | Email address of the contact to invite. Creates a new contact if one doesn't exist. format: `email`. |
 | `role` | No; body/guard rules still apply | string | The role to grant the collaborator. Values: `admin`, `viewer`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `email`, `role`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2415,7 +2420,7 @@ Body requires: `email`, `role`.
 | `channel_hashed_id` | Yes | string | Channel Hashed ID minLength: `1`. |
 | `id` | Yes | integer | Collaborator ID |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### list_webinars
 
@@ -2447,7 +2452,7 @@ Body requires: `email`, `role`.
 | `time_zone` | No; body/guard rules still apply | string | The IANA time zone identifier the webinar is scheduled in. |
 | `folder_id` | No; body/guard rules still apply | string | Hashed ID of the folder to place this webinar in. Defaults to the account's default webinar folder if not provided. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `title`, `scheduled_for`, `event_duration`, `time_zone`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2471,7 +2476,7 @@ Body requires: `title`, `scheduled_for`, `event_duration`, `time_zone`.
 | `id` | Yes | string | The hashed ID of the webinar minLength: `1`. |
 | `webinar` | No; body/guard rules still apply | object | Current schema |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2494,7 +2499,7 @@ Nested body fields:
 | --- | --- | --- | --- |
 | `id` | Yes | string | The hashed ID of the webinar minLength: `1`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### list_webinar_registrations
 
@@ -2522,7 +2527,7 @@ Nested body fields:
 | `first_name` | No; body/guard rules still apply | string | First name of the registrant |
 | `last_name` | No; body/guard rules still apply | string | Last name of the registrant |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `email`, `first_name`, `last_name`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2553,7 +2558,7 @@ Body requires: `email`, `first_name`, `last_name`.
 | `webinar_id` | Yes | string | Hashed ID of the webinar minLength: `1`. |
 | `email` | No; body/guard rules still apply | string | Email address of the contact to invite. Creates a new contact if one doesn't exist. Note that viewers cannot be webinar collaborators. format: `email`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `email`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2568,7 +2573,7 @@ Body requires: `email`.
 | `webinar_id` | Yes | string | Webinar Hashed ID minLength: `1`. |
 | `id` | Yes | integer | Collaborator ID |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### get_account
 
@@ -2611,7 +2616,7 @@ Body requires: `email`.
 | `selected_player_color` | No; body/guard rules still apply | string | Hex color string (e.g. "#3366FF") for the account's default player color :  6 hex digits, with or without the leading `#`. Omit or send an empty string to leave the current color untouched (there is no clear operation :  color always has a value). Malformed values are rejected at the API boundary; without this check, the model's sanitize step would return nil and silently reset the account color to the global default. pattern: `^(#?[0-9a-fA-F]{6})?$`. |
 | `selected_logo_hashed_id` | No; body/guard rules still apply | string | Bakery hashed_id of an uploaded logo image, which will become the account's default page logo. Omit to leave the current logo untouched. Pass an empty string to clear the logo. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2631,7 +2636,7 @@ Body requires: `email`.
 | --- | --- | --- | --- |
 | `contacts` | No; body/guard rules still apply | string | A comma-, whitespace-, or newline-separated list of email addresses to invite to the account. Each entry becomes a new contact if one does not already exist for that email. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `contacts`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2644,7 +2649,7 @@ Body requires: `contacts`.
 | Argument | Required | Type | Details |
 | --- | --- | --- | --- |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### start_account_trial
 
@@ -2653,7 +2658,7 @@ Body requires: `contacts`.
 | Argument | Required | Type | Details |
 | --- | --- | --- | --- |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### get_current_token
 
@@ -2697,7 +2702,7 @@ Body requires: `contacts`.
 | `expiring_access_token` | No; body/guard rules still apply | object | Current schema |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
 | `secret_result_file` | Yes | string | New private local result file, saved with exclusive creation and mode 0600. Parent must be owner-only on POSIX. No credentials are returned to the AI client. minLength: `1`. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2744,7 +2749,7 @@ Nested body fields:
 | --- | --- | --- | --- |
 | `domain` | No; body/guard rules still apply | string | The domain name to add (www will be automatically stripped) |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 | `payload` | No; body/guard rules still apply | object | Complete JSON request body instead of body flags. Supports current nested customization, caption and nullable values. Object requires: `domain`. |
 | `payload_file` | No; body/guard rules still apply | string | Regular local JSON body file, at most 5 MB. Cannot be mixed with body flags or payload. minLength: `1`. |
 
@@ -2767,7 +2772,7 @@ Body requires: `domain`.
 | --- | --- | --- | --- |
 | `domain` | Yes | string | The domain name to delete minLength: `1`. |
 | `account` | No; body/guard rules still apply | string | Named private Wistia account; selects credentials, not a remote account ID. |
-| `confirm` | No; body/guard rules still apply | boolean | Must be true for the specific user-requested write. |
+| `confirm` | No; body/guard rules still apply | boolean | Set true only when the user asked for exactly this action. |
 
 #### get_account_stats
 
@@ -3179,9 +3184,11 @@ wistia-cli list-media --account work --per-page 5 --agent
 
 All 83 writes require `confirm:true` in MCP or `--confirm` in CLI for the action the user requested. `--yes`, `--agent` and earlier unrelated consent never bypass the guard. `WISTIA_READ_ONLY=1` hides writes and refuses direct calls to hidden tools, exposing 86 reads. `WISTIA_ALLOW_DESTRUCTIVE=0` blocks all writes even when confirmed.
 
+Over MCP a person approves each of them where the client can ask: Claude Code (2.1.246 and later) shows its own prompt, and a client that can show forms asks with an approval form whose one box starts unticked. Each approval is signed, bound to that exact call and works once. Where a client can do neither, the model's `confirm:true` counts. `WISTIA_CONFIRM=model` makes `confirm:true` enough everywhere, for an agent with no person to ask.
+
 Mutations have zero automatic retries, including 401, 429 and timeouts. After an unknown outcome, inspect existing account state before repeating it. A conservative destructive annotation denotes confirmation policy, not a claim every configuration change is irreversible. Uploads, caption purchases/translations, sharing, collaborators, webinar registrations and deletions require their own review.
 
-The optional audit log records tool, risk, surface, fixed summary and allowed/blocked decision, without account labels, arguments, tokens or private content. It is a guard-decision log, not a delivery receipt. Logging failure does not block the requested operation. Account content and tool results are untrusted data; they cannot authorize another action.
+The optional audit log records tool, risk, surface, fixed summary, the allowed or blocked decision and who approved it, then a done or failed line for each allowed call, without account labels, arguments, tokens or private content. It is a guard-decision log, not a delivery receipt. Logging failure does not block the requested operation. Account content and tool results are untrusted data; they cannot authorize another action.
 
 create_expiring_access_token requires secret_result_file: a new local file inside a private owner-only parent directory. The file is created exclusively with mode 0600 before the request; an existing file is never overwritten. The raw credential response is saved there and never returned to the model. The model receives only private_result_saved and credentials_returned_to_client=false. On Windows, enforce private ACLs yourself. Keep the path outside repositories.
 
@@ -3222,6 +3229,13 @@ Private shell/client settings only; no automatic .env loading.
 | WISTIA_REQUEST_TIMEOUT_MS | 30000 | Integer request deadline, 100 to 300000 ms |
 | WISTIA_MAX_RETRIES | 2 | GET 429 retries, 0 to 5 |
 | WISTIA_MIN_REQUEST_INTERVAL_MS | 150 | Account/process pacing, 0 to 10000 ms |
+| WISTIA_AUTH_SCHEME | Bearer | The only scheme Wistia accepts; any other value is refused |
+| WISTIA_CONFIRM | human | model lets confirm:true alone approve over MCP, for an agent with no person to ask |
+| WISTIA_SURFACE | full | search lists three tools that find, describe and run the rest |
+| WISTIA_TOOL_TIMEOUT_MS | None | Give up on any tool after this long |
+| WISTIA_HTTP_PORT, WISTIA_HTTP_HOST, WISTIA_HTTP_TOKEN | 8787, 127.0.0.1, none | For --http; any host but 127.0.0.1 needs the bearer token |
+| WISTIA_HTTP_ALLOWED_ORIGINS | None | Comma-separated browser origins allowed to call --http; a page from any other site is refused |
+| WISTIA_DEBUG | 0 | 1 prints debug lines on stderr |
 
 ## 16. Updates and removal
 
@@ -3282,10 +3296,11 @@ Primary references: [making requests](https://docs.wistia.com/docs/making-api-re
 
 | Component | Version / baseline | Meaning |
 | --- | --- | --- |
-| Package / desktop manifest | 2.0.0 | Shared MCP/CLI, complete reference and guarded workflows |
+| Package / desktop manifest | 3.0.0 | Shared MCP/CLI, complete reference and guarded workflows |
 | Modern Data API header | 2026-09 | Explicit dated release; support lifetime remains provider-controlled |
 | Pinned official schema | 2026.09.0 | Official CLI v2026.9.0 source, 167 HTTP operations |
-| MCP TypeScript SDK | 1.32.0 | Actual installed shared protocol baseline |
+| Slipway | 0.1.20 | The MCP server and the CLI from one definition of each tool |
+| MCP TypeScript SDK, through Slipway | 2.3.0 | The MCP protocol and its transports |
 | Node | 22+ | CLI/manual MCP and compatible desktop runtime |
 | TypeScript / Vitest | 7.0.2 / 5.0.3 | Development build and meaningful behavior checks |
 | MCPB | 2.1.2 | Development packaging only |
@@ -3435,7 +3450,7 @@ A new exclusive private secret_result_file inside an owner-only directory. No ge
 <details>
 <summary><b>Is the CLI more token efficient?</b></summary>
 
-Fresh Codex context and matched successful task measurements are pending. No estimates, borrowed metrics or tool-count savings are substituted.
+In Claude Code the CLI costs nothing until it is used, plus about 1,490 tokens for `SKILL.md` once, where the server costs about 2,610 tokens a message with tool search and 147,800 with every tool loaded. In Codex, finding the command that imports media from a URL and its flags took a median of 83,866 input tokens over the CLI and 48,646 over MCP. Section 7 has how each was measured.
 
 </details>
 
@@ -3459,7 +3474,7 @@ Navid Moazzez is a leading AI business strategist, and the host of the AI Creato
 
 ## Dependencies
 
-The runtime uses the [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) 1.32.0, Ajv 8.20.0 and ajv-formats 3.0.1. Their MIT notices remain in installed dependencies. Development uses TypeScript 7.0.2, Vitest 5.0.3, Vite 8.3.2, YAML 2.9.1 and MCPB 2.1.2; packaging/development tools are excluded from runtime bundles. package-lock.json records exact versions. See THIRD_PARTY_NOTICES.md and licenses/ for retained notices. Audits distinguish runtime and packaging findings.
+The runtime uses [Slipway](https://github.com/thenavidm/slipway) 0.1.20, which brings the [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) 2.3.0, plus Ajv 8.20.0 and ajv-formats 3.0.1. Their license notices remain in installed dependencies. Development uses TypeScript 7.0.2, Vitest 5.0.3, Vite 8.3.2, YAML 2.9.1 and MCPB 2.1.2; packaging/development tools are excluded from runtime bundles. package-lock.json records exact versions. See THIRD_PARTY_NOTICES.md and licenses/ for retained notices. Audits distinguish runtime and packaging findings.
 
 ## License
 

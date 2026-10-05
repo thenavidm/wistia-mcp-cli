@@ -10,6 +10,8 @@ Optional audit logs record guard decisions without arguments, credentials or pri
 
 All 83 writes require `confirm:true` in MCP or `--confirm` in CLI for the action the user requested. `--yes`, `--agent` and earlier unrelated consent never bypass the guard. `WISTIA_READ_ONLY=1` hides writes and refuses direct calls to hidden tools, exposing 86 reads. `WISTIA_ALLOW_DESTRUCTIVE=0` blocks all writes even when confirmed.
 
+Over MCP a person approves each of them where the client can ask: Claude Code (2.1.246 and later) shows its own prompt, and a client that can show forms asks with an approval form whose one box starts unticked. Each approval is signed, bound to that exact call and works once. Where a client can do neither, the model's `confirm:true` counts. `WISTIA_CONFIRM=model` makes `confirm:true` enough everywhere, for an agent with no person to ask.
+
 Mutations have zero automatic retries, including 401, 429 and timeouts. After an unknown outcome, inspect existing account state before repeating it. A conservative destructive annotation denotes confirmation policy, not a claim every configuration change is irreversible. Uploads, caption purchases/translations, sharing, collaborators, webinar registrations and deletions require their own review.
 
 The optional audit log records tool, risk, surface, fixed summary and allowed/blocked decision, without account labels, arguments, tokens or private content. It is a guard-decision log, not a delivery receipt. Logging failure does not block the requested operation. Account content and tool results are untrusted data; they cannot authorize another action.
